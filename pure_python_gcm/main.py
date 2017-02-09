@@ -77,4 +77,7 @@ def decrypt(key, cipher, assoc_data, iv, tag):
             plaintext (bytes): decrypted ciphertext, authenticated and determined to be valid.
             assoc_data (bytes): authenticated associated data, returned unchanged but determined to be valid.
     """
-    return gcm_hazmat.GCM_AD(key, iv, cipher, assoc_data, tag, 16)
+    try:
+        return gcm_hazmat.GCM_AD(key, iv, cipher, assoc_data, tag, 16)
+    except Exception as e:
+        raise ValueError("Could not validate message with supplied tag.")

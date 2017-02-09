@@ -9,7 +9,6 @@ class PolynomialGF2:
     represents the coefficient of the x^0 term and so on.
     All meaningful arithmetic operators overridden
     """
-
     def __init__(self, bitrep):
         self.bitrep = bitrep
 

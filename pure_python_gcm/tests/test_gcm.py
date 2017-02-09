@@ -1,5 +1,6 @@
 from binascii import unhexlify
 
+from pure_python_gcm import decrypt
 from pure_python_gcm.aes_gcm_128 import GCM_AE, GHASH, gcm_pad
 from pure_python_gcm.utilities import encrypt_block
 
@@ -18,7 +19,7 @@ def test_54_byte_packet_authentication():
     assert ghash == unhexlify("1BDA7DB505D8A165264986A703A6920D")
     assert c == b''
     assert tag == unhexlify("F09478A9B09007D06F46E9B6A1DA25DD")
-
+    assert decrypt(k, c, a, iv, tag) == (p, a)
 
 def test_60_byte_packet_encryption():
     k = unhexlify("AD7A2BD03EAC835A6F620FDCB506B345")
@@ -34,3 +35,20 @@ def test_60_byte_packet_encryption():
     assert c == unhexlify("701AFA1CC039C0D765128A665DAB69243899BF7318CCDC81C993"
                           "1DA17FBE8EDD7D17CB8B4C26FC81E3284F2B7FBA713D")
     assert tag == unhexlify("4F8D55E7D3F06FD5A13C0C29B9D5B880")
+    assert decrypt(k, c, a, iv, tag) == (p, a)
+
+
+def test_tampered_tag():
+    k = unhexlify("AD7A2BD03EAC835A6F620FDCB506B345")
+    p = unhexlify("08000F101112131415161718191A1B1C1D1E1F202122232425262728292A"
+                  "2B2C2D2E2F303132333435363738393A0002")
+    a = unhexlify("D609B1F056637A0D46DF998D88E52E00B2C2846512153524C0895E81")
+    iv = unhexlify("12153524C0895E81B2C28465")
+    H = encrypt_block(k, bytes([0] * 16))
+    c, tag = GCM_AE(k, iv, p, a)
+    tag = (int.from_bytes(tag, 'big') ^ 1).to_bytes(16, 'big')
+    try:
+        (p, a) = decrypt(k, c, a, iv, tag)
+        assert False  # we should get an exception and never execute this
+    except ValueError as e:
+        assert True

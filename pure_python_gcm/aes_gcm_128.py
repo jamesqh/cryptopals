@@ -78,24 +78,19 @@ def GCM_AE(key, initial_value, plain_text, assoc_data, tag_length=16):
                             + bytes([0]*(pad_len+8))
                             + len(initial_value).to_bytes(8, 'big'))
     cipher = GCTR(key, incr(nonce_block), plain_text)
-    # c_pad_len, a_pad_len = (16 - len(cipher)) % 16, (16 - len(assoc_data)) % 16
-    # hash_block = GHASH(subkey, assoc_data + bytes([0]*a_pad_len)
-    #                          + cipher + bytes([0]*c_pad_len)
-    #                          + len(assoc_data).to_bytes(8, 'big')
-    #                          + len(cipher).to_bytes(8, 'big'))
     hash_block = GHASH(subkey, gcm_pad(assoc_data, cipher))
     return cipher, GCTR(key, nonce_block, hash_block)[:tag_length]
 
 
 def GCM_AD(key, initial_value, cipher, assoc_data, tag, tag_length=16):
-    """GCM authenticated decryption mdoe per NIST 800-38D."""
+    """GCM authenticated decryption mode per NIST 800-38D."""
     if (len(tag) != tag_length
         or len(cipher) > const.PLAINTEXT_MAX_LENGTH
         or len(assoc_data) > const.ASSOC_DATA_MAX_LENGTH
         or len(initial_value) < const.IV_MIN_LENGTH
         or len(initial_value) > const.IV_MAX_LENGTH
         or tag_length not in const.PERMITTED_TAG_LENGTHS):
-            raise ValueError("Tag failed to validate cipher")
+            raise ValueError("Could not validate message with supplied tag.")
     subkey = encrypt_block(key, bytes([0] * 16))
     if len(initial_value) == 12:
         nonce_block = initial_value + int(1).to_bytes(4, 'big')
@@ -110,4 +105,4 @@ def GCM_AD(key, initial_value, cipher, assoc_data, tag, tag_length=16):
     if tag == derived_tag:
         return plain_text, assoc_data
     else:
-        raise ValueError("Tag failed to validate cipher")
+        raise ValueError("Could not validate message with supplied tag.")

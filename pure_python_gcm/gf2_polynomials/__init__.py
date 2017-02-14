@@ -1,1 +1,1 @@
-from .element import *
+from .element import PolynomialGF2

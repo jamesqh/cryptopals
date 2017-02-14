@@ -49,7 +49,7 @@ def encrypt(key, plaintext, assoc_data, encoding='utf-8'):
                          .format(const.ASSOC_DATA_MAX_LENGTH))
     iv = urandom(12)
     cipher, tag = gcm_hazmat.GCM_AE(key, iv, plaintext, assoc_data, 16)
-    return cipher, tag, iv
+    return cipher, assoc_data, tag, iv
 
 
 def decrypt(key, cipher, assoc_data, iv, tag):

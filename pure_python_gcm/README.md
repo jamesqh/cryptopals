@@ -47,7 +47,7 @@ You aren't really meant to - see above. But if you insist, you can install it th
 
 ## Dependencies
 
-['''cryptography'''](https://pypi.python.org/pypi/cryptography) - Only necessary for single-block AES encryption in ```utilities.py```, should be easy to refactor to your choice.
+[cryptography](https://pypi.python.org/pypi/cryptography) - Only necessary for single-block AES encryption in ```utilities.py```, should be easy to refactor to your choice.
 
 ## A word on polynomials
 

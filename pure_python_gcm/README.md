@@ -45,6 +45,10 @@ It also won't be nearly as fast as such a library.
 
 You aren't really meant to - see above. But if you insist, you can install it the old fashioned way - copy the directory pure_python_gcm to the location of a script, or into the Python module search path, and do ```import pure_python_gcm```
 
+## Dependencies
+
+['''cryptography'''](https://pypi.python.org/pypi/cryptography) - Only necessary for single-block AES encryption in ```utilities.py```, should be easy to refactor to your choice.
+
 ## A word on polynomials
 
 GCM works by representing blocks of data as elements of GF(2^128), the finite field with 2^128 elements. The most natural way to represent those elements is as polynomials with coefficients in GF(2) (that is, the integers modulo 2: 0 and 1) and degree strictly less than 128. Addition is then simply polynomial addition, and multiplication is polynomial multiplication modulo some 128 degree irreducible polynomial. Such a polynomial is completely defined by a series of 128 1s and 0s - I hope you see the obvious connection.

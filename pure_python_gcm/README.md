@@ -63,6 +63,8 @@ This means this code could be easily refactored to use a different field for a c
 
 Anyway, that means this package comes with a couple of bonus modules. **Most of this is not necessary to understand GCM.** GCM needs only field addition and field multiplication, which are the ```__add__``` and ```__mul__``` methods of ```GF2kElement``` instances. Along with the conversions to and from bytes, obviously.
 
+---
+
 ```pure_python_gcm.gf2_polynomials``` lets you generate and do arithmetic on polynomials with coefficients in GF(2), using an underlying representation of them as binary integers with the least significant bit representing the coefficient of the x^0 term, the second least for the coefficient of the x^1 term, and etc. If you have a representation of a polynomial as a dictionary of coefficients keyed by the degrees of their corresponding terms, you can turn that into a ```gf2_polynomials.PolynomialGF2``` with ```PolynomialGF2(sum([coef*2**deg for (deg, coef) in poly.items()])```, as an example.
 
 ```pure_python_gcm.gf2k``` is a module that uses ```PolynomialGF2``` instances to represent elements of a finite field GF(2^k). The main party trick here is that ```*``` and ```**``` and ```pow``` implicitly do multiplication or exponentiation modulo the defining irreducible polynomial for the field in question, but the elements also come equipped with an ```__invert__``` method (```f.__invert()__``` is aliased by ```~f```) that returns the multiplicative inverse of the element's polynomial modulo the field's defining polynomial, hence allowing division (```f/g = f * ~g```) in the field, as long as the element is non-zero.

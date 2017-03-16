@@ -1,3 +1,6 @@
+"""Cryptopals set 5 challenge 34: Implement a MITM key-fixing attack
+on Diffie-Hellman with parameter injection. Simple enough maths."""
+
 import hashlib
 from os import urandom
 

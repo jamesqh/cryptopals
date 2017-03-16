@@ -1,3 +1,6 @@
+"""Cryptopals set 5 challenge 35: Implement DH with negotiated groups
+and break with malicious g parameter. Rehash of the last, really."""
+
 from challenges.set5.challenge34 import (AES_CBC_decrypt, SHA1, ToyDHClient, DHParams)
 
 if __name__ == "__main__":

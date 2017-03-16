@@ -24,7 +24,7 @@ def SHA256(message):
 class ToySRPServer:
     def __init__(self, N=p, g=2, k=3):
         self.N, self.g, self.k = N, g, k
-        self.private_key = random.randint(2, N-2)
+        self.server_private_key = random.randint(2, N - 2)
         """It's a toy and should only ever have one user but heck why not"""
         self.users = {}
 
@@ -34,41 +34,42 @@ class ToySRPServer:
         salt = random.randint(0, 2**16)
         x = int.from_bytes(SHA256(str(salt) + password), "big")
         v = pow(self.g, x, self.N)
-        self_public_key = (self.k * v
-                                   + pow(self.g, self.private_key, self.N)
-                                   ) % self.N
+        server_public_key = (self.k * v
+                                   + pow(self.g, self.server_private_key,
+                                         self.N)) % self.N
         self.users[email] = {"salt": salt, "verifier": v,
-                             "self_public_key": self_public_key}
+                             "server_public_key": server_public_key}
         return True
 
     def get_email_verifier(self, email):
         try:
             salt, v = itemgetter("salt", "verifier")(self.users[email])
             return {"salt": salt,
-                    "public_key": (self.k * v
-                                   + pow(self.g, self.private_key, self.N)
-                                   ) % self.N}
+                    "server_public_key": (self.k * v
+                                   + pow(self.g, self.server_private_key,
+                                         self.N)) % self.N}
         except KeyError:
             """We don't want to give away that a username doesn't exist
             for some reason. So we make up invalid parameters and allow
             verification failure to be deferred to the password stage."""
             return {"salt": random.randint(0, 2**16),
-                    "public_key": random.randint(0, self.N)}
+                    "server_public_key": random.randint(0, self.N)}
 
-    def verify_email(self, email, public_key, token):
+    def verify_email(self, email, user_public_key, token):
         try:
-            salt, v, self_public_key = itemgetter("salt",
+            salt, v, server_public_key = itemgetter("salt",
                                                   "verifier",
-                                                  "self_public_key"
+                                                  "server_public_key"
                                                   )(self.users[email])
         except KeyError:
             """See get_email_verifier"""
-            salt, v, self_public_key = (random.randint(0, 2**16),
-                                        random.randint(0, self.N),
-                                        random.randint(0, self.N))
-        u = int.from_bytes(SHA256(str(public_key)
-                                  + str(self_public_key)), "big")
-        S = pow(public_key * pow(v, u, self.N) , self.private_key, self.N)
+            salt, v, server_public_key = (random.randint(0, 2**16),
+                                          random.randint(0, self.N),
+                                          random.randint(0, self.N))
+        u = int.from_bytes(SHA256(str(user_public_key)
+                                  + str(server_public_key)), "big")
+        S = pow(user_public_key * pow(v, u, self.N),
+                self.server_private_key, self.N)
         K = SHA256(str(S))
         if hmac.compare_digest(token,
                                hmac.new(K,
@@ -81,23 +82,22 @@ class ToySRPServer:
 class ToySRPClient:
     def __init__(self, email, password, N=p, g=2, k=3):
         self.N, self.g, self.k = N, g, k
-        self.private_key = random.randint(2, N-2)
+        self.user_private_key = random.randint(2, N - 2)
         self.email = email
         self.password = password
     def register_with_server(self, server):
         server.create_user(self.email, self.password)
     def login_to_server(self, server):
-        salt, server_public_key = itemgetter("salt",
-                                             "public_key"
-                                             )(server.get_email_verifier(self.email))
-        public_key = pow(self.g, self.private_key, self.N)
-        u = int.from_bytes(SHA256(str(public_key) + str(server_public_key)),
-                           "big")
+        salt, server_public_key = itemgetter("salt","server_public_key")\
+            (server.get_email_verifier(self.email))
+        user_public_key = pow(self.g, self.user_private_key, self.N)
+        u = int.from_bytes(SHA256(str(user_public_key)
+                                  + str(server_public_key)), "big")
         x = int.from_bytes(SHA256(str(salt) + self.password), "big")
         S = pow(server_public_key - self.k * pow(self.g, x, self.N),
-                self.private_key + u * x, self.N)
+                self.user_private_key + u * x, self.N)
         K = SHA256(str(S))
-        if server.verify_email(self.email, public_key,
+        if server.verify_email(self.email, user_public_key,
                                hmac.new(K, str(salt)
                                        .encode("utf-8")).hexdigest()):
             return True

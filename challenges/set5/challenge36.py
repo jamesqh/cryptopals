@@ -37,17 +37,18 @@ class ToySRPServer:
         server_public_key = (self.k * v
                                    + pow(self.g, self.server_private_key,
                                          self.N)) % self.N
-        self.users[email] = {"salt": salt, "verifier": v,
+        self.users[email] = {"salt": salt,
+                             "verifier": v,
                              "server_public_key": server_public_key}
         return True
 
     def get_email_verifier(self, email):
         try:
-            salt, v = itemgetter("salt", "verifier")(self.users[email])
+            salt, server_public_key = itemgetter("salt",
+                                                 "server_public_key"
+                                                 )(self.users[email])
             return {"salt": salt,
-                    "server_public_key": (self.k * v
-                                   + pow(self.g, self.server_private_key,
-                                         self.N)) % self.N}
+                    "server_public_key": server_public_key}
         except KeyError:
             """We don't want to give away that a username doesn't exist
             for some reason. So we make up invalid parameters and allow
@@ -58,9 +59,9 @@ class ToySRPServer:
     def verify_email(self, email, user_public_key, token):
         try:
             salt, v, server_public_key = itemgetter("salt",
-                                                  "verifier",
-                                                  "server_public_key"
-                                                  )(self.users[email])
+                                                    "verifier",
+                                                    "server_public_key"
+                                                    )(self.users[email])
         except KeyError:
             """See get_email_verifier"""
             salt, v, server_public_key = (random.randint(0, 2**16),

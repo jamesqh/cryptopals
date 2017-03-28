@@ -1,9 +1,95 @@
 """Cryptopals set 5 challenge 39: Implement RSA.
-I'm gonna implement Baillie-PSW primegen because RSA on its own is hardly fun"""
+I'm gonna implement Miller-Rabin primegen because RSA on its own is hardly fun"""
 
-import math
+import random
+from collections import namedtuple
 
 from sympy import isprime
+
+
+def int2bytes(i):
+    return i.to_bytes(i.bit_length()//8 + 1, "big")
+
+
+def bytes2int(b):
+    return int.from_bytes(b, "big")
+
+
+def extended_euclidean(a, b):
+    s, s_ = 0, 1
+    t, t_ = 1, 0
+    r, r_ = b, a
+    while r != 0:
+        quotient = r_ // r
+        r_, r = r, r_ - quotient * r
+        t_, t = t, t_ - quotient * t
+        s_, s = s, s_ - quotient * s
+    return r_, s_, t_
+
+
+def modinv(a, m):
+    gcd, s, _ = extended_euclidean(a, m)
+    if gcd != 1:
+        raise ZeroDivisionError(
+            "{0} has no inverse modulo {1}: gcd must be 1, not {2}"
+                .format(a, m, gcd))
+    else:
+        return s % m
+
+
+RSAPrivateKey = namedtuple("RSAPrivateKey", ["key", "modulo"])
+RSAPublicKey = namedtuple("RSAPublicKey", ["key", "modulo"])
+
+
+def generate_rsa_key(bits=2048, e=3):
+    p = generate_prime(bits)
+    while (p - 1) % e == 0:
+        p = generate_prime(bits)
+    q = generate_prime(bits)
+    while (q - 1) % e == 0:
+        q = generate_prime(bits)
+    n = p*q
+    et = (p-1)*(q-1)
+    d = modinv(e, et)
+    return RSAPublicKey(e, n), RSAPrivateKey(d, n)
+
+
+def rsa_encrypt(text, public_key):
+    if not isinstance(text, int):
+        try:
+            """In case text is just a string, turn it into bytes"""
+            text = text.encode("utf-8")
+        except AttributeError:
+            pass
+        text = bytes2int(text)
+    if text > public_key.modulo:
+        raise RuntimeError("Text too big to be encrypted with this RSA key")
+    else:
+        cipher = pow(text, public_key.key, public_key.modulo)
+        return cipher
+
+
+def rsa_decrypt(cipher, private_key, return_type=bytes):
+    if not isinstance(cipher, int):
+        try:
+            """In case cipher is just a string, turn it into bytes"""
+            cipher = cipher.encode("utf-8")
+        except AttributeError:
+            pass
+        cipher = bytes2int(cipher)
+    if cipher > private_key.modulo:
+        raise RuntimeError("Cipher too big to be decrypted with this RSA key")
+    else:
+        text = pow(cipher, private_key.key, private_key.modulo)
+        if return_type is bytes:
+            return int2bytes(text)
+        else:
+            raise RuntimeError("No decoding defined for return type: {0}"
+                               .format(return_type))
+
+
+"""All this prime stuff is just showing off. Use a prime library that implements
+the same thing in C!"""
 
 primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
           67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
@@ -14,126 +100,84 @@ primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
           463, 467, 479, 487, 491, 499, 503, 509, 521, 523, 541]
 
 
-def baillie_psw(candidate, trial_division_limit=541):
-    if candidate == 0:
-        return False
+def generate_prime(bits):
+    start = random.randint(2**(bits-1), 2**bits)
+    return next_prime(start)
+
+
+def next_prime(start):
+    candidate = start
+    """This is kind of awkward... we want to advance in steps of 2
+    to trivially avoid even numbers. To do this we'll make sure
+    our starting point is odd. We will do this by SUBTRACTING one if it is even
+    because we want to make sure we advance a step
+    BEFORE doing the first prime test. Because we want the *next* prime,
+    if the starting point is already prime we don't want to return it."""
+    if candidate%2 == 0:
+        candidate -= 1
+    while True:
+        candidate += 2
+        if miller_rabin(candidate):
+            return candidate
+
+
+def miller_rabin(candidate, k=15, trial_division_limit=100):
     if candidate == 1:
         return False
-    if candidate == 2:
-        return True
-    for prime in [x for x in primes if x <= trial_division_limit and x != candidate]:
-        if candidate % prime == 0:
-            return False
-    if not strong_fermat_test(candidate):
-        print("fermat false")
-        return False
-
-    def find_jacobi_thing(candidate):
-        for i in range(100):
-            if jacobi((-1)**i * (5 + 2*i), candidate) == -1:
-                return i
-        for i in range(int(math.sqrt(candidate))):
-            if i**2 == candidate:
-                print("a sqrt")
-                raise RuntimeError
-        print("not a sqrt but didn't find")
-    try:
-        i = find_jacobi_thing(candidate)
-    except RuntimeError as e:
-        print(e)
-        print("impossible false")
-        return False
-    D = (-1)**i * (5 + 2*i)
-    P = 1
-    Q = (1 - D) // 4
-    if lucas_test(candidate, D, P, Q):
-        return True
-    else:
-        print("lucas false")
-        return False
-
-
-def strong_fermat_test(candidate, base=2):
     n = candidate
-    a = base
-    # register = n - 1
-    # s = 0
-    # while register % 2 == 0:
-    #     register >>= 1
-    #     s += 1
-    # d = (n - 1) // 2**s
-    d, s = power_2_factor(n-1)
-    if pow(a, d, n) == 1:
+    for prime in primes[:trial_division_limit]:
+        if n == prime:
+            return True
+        if n % prime == 0:
+            return False
+    d, r = power_2_factor(n-1)
+    witnesses = generate_witnesses(n, k)
+    for witness in witnesses:
+        if not test_witness(candidate, witness, d, r):
+            return False
+    return True
+
+
+def test_witness(candidate, witness, d, r):
+    x = pow(witness, d, candidate)
+    if x == 1 or x == candidate-1:
         return True
-    for r in range(s):
-        if pow(a, d*2**r, n) == -1 % n:
+    for _ in range(r):
+        x = pow(x, 2, candidate)
+        if x == candidate-1:
             return True
     return False
 
 
-def lucas_test(candidate, D, P, Q):
-    assert D == P**2 - 4*Q
-    assert gcd(candidate, Q) == 1, (Q, gcd(candidate, Q))
-    n = candidate
-    delta_n = n - jacobi(D, n)
-    U_delta_n, _ = get_Un_and_Vn(delta_n, P, Q)
-    if U_delta_n % candidate == 0:
-        return True
-    return False
-
-
-lucas = {}
-
-
-def get_Un_and_Vn(n, P, Q):
-    try:
-        lucas_PQ = lucas[(P, Q)]
-    except KeyError:
-        # lucas_PQ = {"U": {0: 0, 1: 1},
-        #             "V": {0: 2, 1: P}}
-        lucas_PQ = {0: (0, 2), 1: (1, P)}
-        lucas[(P, Q)] = lucas_PQ
-    try:
-        return lucas_PQ[n]
-    except KeyError:
-        if n % 2 == 0:
-            half_n = n >> 1
-            U_half_n, V_half_n = get_Un_and_Vn(half_n, P, Q)
-            U_n = U_half_n * V_half_n
-            V_n = V_half_n**2 -2*Q**half_n
-            lucas_PQ[n] = (U_n, V_n)
-            return lucas_PQ[n]
-        else:
-            n_minus_1 = n - 1
-            U_n_minus_1, V_n_minus_1 = get_Un_and_Vn(n_minus_1, P, Q)
-            U_n = (P*U_n_minus_1 + V_n_minus_1)//2
-            V_n = ((P**2 - 4*Q)*U_n_minus_1 + P*V_n_minus_1)//2
-            lucas_PQ[n] = (U_n, V_n)
-            return lucas_PQ[n]
-
-
-def jacobi(a, n):
-    a = a % n
-    if gcd(a, n) != 1:
-        return 0
-    if a == 1:
-        return 1
-    if a == 2:
-        if n % 8 == 1 or n % 8 == 7:
-            return 1
-        if n % 8 == 3 or n % 8 == 5:
-            return -1
-        else:
-            print("bad stuff")
-    d, s = power_2_factor(a)
-    if s > 0:
-        return jacobi(d, n) * jacobi(2, n)**s
-    if n % 4 == 1 or a % 4 == 1:
-        return jacobi(n, a)
-    if n % 4 == a % 4 == 3:
-        return -jacobi(n, a)
-    else:
-        print("bad stuff")
+def generate_witnesses(candidate, k):
+    bounds = [(2047, [2]),
+              (1373653, [2, 3]),
+              (9080191, [31, 73]),
+              (25326001, [2, 3, 5]),
+              (3215031751, [2, 3, 5, 7]),
+              (4759123141, [2, 7, 61]),
+              (1122004669633, [2, 13, 23, 1662803]),
+              (2152302898747, [2, 3, 5, 7, 11]),
+              (3474749660383, [2, 3, 5, 7, 11, 13]),
+              (341550071728321, [2, 3, 5, 7, 11, 13, 17]),
+              (3825123056546413051, [2, 3, 5, 7, 11, 13, 17, 19, 23]),
+              (18446744073709551616, [2, 3, 5, 7, 11, 13, 17, 19, 23,27, 29,
+                                      31, 37]),
+              (318665857834031151167461, [2, 3, 5, 7, 11, 13, 17, 19, 23, 27,
+                                          29, 31, 37]),
+              (3317044064679887385961981, [2, 3, 5, 7, 11, 13, 17, 19, 23, 27,
+                                           29, 31, 37, 41])]
+    witnesses = []
+    for bound, bound_witnesses in bounds:
+        witnesses = bound_witnesses
+        if candidate < bound:
+            return witnesses
+    while len(witnesses) < k:
+        next_witness = random.randint(2, candidate-2)
+        while next_witness in witnesses:
+            next_witness = random.randint(2, candidate - 2)
+        witnesses += [next_witness]
+    return witnesses
 
 
 def gcd(a, n):
@@ -148,10 +192,31 @@ def gcd(a, n):
 
 def power_2_factor(n):
     s = 0
-    while n % 2 == 0:
+    while n % 2 == 0 and n > 0:
         n >>= 1
         s += 1
     return n, s
 
-for i in range(100000):
-    assert baillie_psw(i) == isprime(i), i
+
+if __name__ == "__main__":
+    import time
+    random.seed(10000)
+    c = random.randint(2**2047, 2**2048)
+    start = time.time()
+    myprime = next_prime(c)
+    mytime = time.time() - start
+    print("my", mytime)
+    assert isprime(myprime)
+    # start = time.time()
+    # spprime = sympy_nextprime(c)
+    # sptime = time.time() - start
+    # print("sp", sptime)
+    # assert myprime == spprime
+
+    # msg = b"H"
+    # print("msg bit length", bytes2int(msg).bit_length())
+    # public_key, private_key = generate_rsa_key(bits=22)
+    # print("Found primes")
+    # cipher = rsa_encrypt(msg, public_key)
+    # assert rsa_decrypt(cipher, private_key) == msg
+    # print("Challenge complete, now throw all that nasty code away and use a lib")

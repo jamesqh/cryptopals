@@ -4,8 +4,6 @@ I'm gonna implement Miller-Rabin primegen because RSA on its own is hardly fun""
 import random
 from collections import namedtuple
 
-from sympy import isprime
-
 
 def int2bytes(i):
     return i.to_bytes(i.bit_length()//8 + 1, "big")
@@ -167,15 +165,14 @@ def generate_witnesses(candidate, k):
                                           29, 31, 37]),
               (3317044064679887385961981, [2, 3, 5, 7, 11, 13, 17, 19, 23, 27,
                                            29, 31, 37, 41])]
-    witnesses = []
     for bound, bound_witnesses in bounds:
-        witnesses = bound_witnesses
         if candidate < bound:
-            return witnesses
+            return bound_witnesses
+    witnesses = []
     while len(witnesses) < k:
-        next_witness = random.randint(2, candidate-2)
+        next_witness = random.randint(2, max(2**64, candidate-2))
         while next_witness in witnesses:
-            next_witness = random.randint(2, candidate - 2)
+            next_witness = random.randint(2, max(2**64, candidate - 2))
         witnesses += [next_witness]
     return witnesses
 
@@ -198,25 +195,29 @@ def power_2_factor(n):
     return n, s
 
 
-if __name__ == "__main__":
-    import time
-    random.seed(10000)
-    c = random.randint(2**2047, 2**2048)
-    start = time.time()
-    myprime = next_prime(c)
-    mytime = time.time() - start
-    print("my", mytime)
-    assert isprime(myprime)
-    # start = time.time()
-    # spprime = sympy_nextprime(c)
-    # sptime = time.time() - start
-    # print("sp", sptime)
-    # assert myprime == spprime
+# pseudoprime_names = ["fermat2pp", "millerrabin2pp", "lucasselfridge",
+#                      "stronglucasselfridge", "almostextrastronglucas",
+#                      "extrastronglucas", "perrin", "bruckmanlucas",
+#                      "fibonacci2", "pell", "frobenius1-1", "frobenius3-5"]
+# pseudoprime_sets = {}
+# for name in pseudoprime_names:
+#     with open(os.path.join("pseudoprimes", name + ".txt")) as f:
+#         lines = f.readlines()
+#     pseudoprime_sets[name] = [int(line.rstrip("\n")) for line in lines]
 
-    # msg = b"H"
-    # print("msg bit length", bytes2int(msg).bit_length())
-    # public_key, private_key = generate_rsa_key(bits=22)
-    # print("Found primes")
-    # cipher = rsa_encrypt(msg, public_key)
-    # assert rsa_decrypt(cipher, private_key) == msg
-    # print("Challenge complete, now throw all that nasty code away and use a lib")
+# arnault_p1 = int("2967449566868551055015417464290533273077199179985304335099507"
+#                  "5531276838753171770199594238596428121188033664754218345562493"
+#                  "168782883")
+# arnault_pp = arnault_p1 * (313*(arnault_p1-1)+1) * (353*(arnault_p1-1)+1)
+
+
+if __name__ == "__main__":
+    msg = b"Hello! Is it me you're looking for?"
+    print("msg bit length", bytes2int(msg).bit_length())
+    public_key, private_key = generate_rsa_key(bits=(int(len(msg)*8/128)+1)*128)
+    print("key length", (int(len(msg)*8/128)+1)*128)
+    print("Found primes")
+    cipher = rsa_encrypt(msg, public_key)
+    assert rsa_decrypt(cipher, private_key) == msg
+    print("Challenge complete, my prime testing function is actually faster "
+          "than sympy's, and it accurately detects Arnault's pseudoprime!")

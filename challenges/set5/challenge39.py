@@ -215,7 +215,7 @@ if __name__ == "__main__":
     msg = b"Hello! Is it me you're looking for?"
     print("msg bit length", bytes2int(msg).bit_length())
     public_key, private_key = generate_rsa_key(bits=(int(len(msg)*8/128)+1)*128)
-    print("key length", (int(len(msg)*8/128)+1)*128)
+    print("key length", (int(len(msg)*8/128)+1)*64)
     print("Found primes")
     cipher = rsa_encrypt(msg, public_key)
     assert rsa_decrypt(cipher, private_key) == msg

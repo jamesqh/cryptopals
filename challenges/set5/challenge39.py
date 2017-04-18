@@ -39,7 +39,7 @@ RSAPrivateKey = namedtuple("RSAPrivateKey", ["key", "modulo"])
 RSAPublicKey = namedtuple("RSAPublicKey", ["key", "modulo"])
 
 
-def generate_rsa_key(bits=2048, e=3):
+def generate_rsa_key(bits=1024, e=3):
     p = generate_prime(bits)
     while (p - 1) % e == 0:
         p = generate_prime(bits)

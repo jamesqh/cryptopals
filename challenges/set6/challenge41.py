@@ -1,4 +1,4 @@
-"""Cryptopals set 5 challenge 41: Implement unpadded RSA message recover oracle."""
+"""Cryptopals set 6 challenge 41: Implement unpadded RSA message recover oracle."""
 
 import random
 import time

@@ -17,6 +17,7 @@ def rounded_integer_division(a, b):
 
 
 def integer_cube_root(a):
+    """Binary search is easy and surprisingly fast for even very large numbers."""
     if a == 0 or a == 1:
         return a
     a = mpz(a)

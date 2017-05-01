@@ -11,7 +11,7 @@ from operator import itemgetter
 
 from nltk.corpus import words
 
-from challenges.set5.challenge36 import SHA256, p
+from challenges.set5.challenge36 import sha256, p
 
 word_list = words.words()
 password_list = [word for word in word_list if len(word) > 5]
@@ -32,7 +32,7 @@ class SimplifiedToySRPServer:
         if email in self.users.keys():
             raise RuntimeError("User already exists")
         salt = random.randint(0, 2**16)
-        x = int.from_bytes(SHA256(str(salt) + password), "big")
+        x = int.from_bytes(sha256(str(salt) + password), "big")
         v = pow(self.g, x, self.N)
         server_public_key = pow(self.g, self.server_private_key, self.N)
         ephemeral_u = random.getrandbits(128)
@@ -75,7 +75,7 @@ class SimplifiedToySRPServer:
                                              random.getrandbits(128))
         S = pow(user_public_key * pow(v, u, self.N),
                 self.server_private_key, self.N)
-        K = SHA256(str(S))
+        K = sha256(str(S))
         if hmac.compare_digest(token,
                                hmac.new(K,
                                         str(salt).encode("utf-8")).hexdigest()):
@@ -103,9 +103,9 @@ class SimplifiedToySRPClient:
                          "ephemeral_u"
                          )(server.get_email_verifier(self.email))
         user_public_key = pow(self.g, self.user_private_key, self.N)
-        x = int.from_bytes(SHA256(str(salt) + self.password), "big")
+        x = int.from_bytes(sha256(str(salt) + self.password), "big")
         S = pow(server_public_key, self.user_private_key + u*x, self.N)
-        K = SHA256(str(S))
+        K = sha256(str(S))
         if server.verify_email(self.email, user_public_key,
                                hmac.new(K, str(salt)
                                        .encode("utf-8")).hexdigest()):
@@ -128,10 +128,10 @@ class AttackServer:
         and we just passed through the login to the actual server
         so it doesn't take a suspiciously long time."""
         for password in password_list:
-            x = int.from_bytes(SHA256(str(0) + password), "big")
+            x = int.from_bytes(sha256(str(0) + password), "big")
             v = pow(self.g, x, self.N)
             A = user_public_key
-            K = SHA256((A*v)%self.N)
+            K = sha256((A * v) % self.N)
             test_token = hmac.new(K, str(0).encode("utf-8")).hexdigest()
             """No need to worry about timing attacks here!"""
             if test_token == token:

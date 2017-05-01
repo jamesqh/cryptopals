@@ -12,7 +12,8 @@ p = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc7402"
         "1c55d39a69163fa8fd24cf5f83655d23dca3ad961c62f356208552bb9ed5290770"
         "96966d670c354e4abc9804f1746c08ca237327ffffffffffffffff", 16)
 
-def SHA256(message):
+
+def sha256(message):
     if not isinstance(message, bytes):
         try:
             message = message.encode("utf-8")
@@ -32,7 +33,7 @@ class ToySRPServer:
         if email in self.users.keys():
             raise RuntimeError("User already exists")
         salt = random.randint(0, 2**16)
-        x = int.from_bytes(SHA256(str(salt) + password), "big")
+        x = int.from_bytes(sha256(str(salt) + password), "big")
         v = pow(self.g, x, self.N)
         server_public_key = (self.k * v
                                    + pow(self.g, self.server_private_key,
@@ -67,11 +68,11 @@ class ToySRPServer:
             salt, v, server_public_key = (random.randint(0, 2**16),
                                           random.randint(0, self.N),
                                           random.randint(0, self.N))
-        u = int.from_bytes(SHA256(str(user_public_key)
+        u = int.from_bytes(sha256(str(user_public_key)
                                   + str(server_public_key)), "big")
         S = pow(user_public_key * pow(v, u, self.N),
                 self.server_private_key, self.N)
-        K = SHA256(str(S))
+        K = sha256(str(S))
         if hmac.compare_digest(token,
                                hmac.new(K,
                                         str(salt).encode("utf-8")).hexdigest()):
@@ -92,12 +93,12 @@ class ToySRPClient:
         salt, server_public_key = itemgetter("salt","server_public_key")\
             (server.get_email_verifier(self.email))
         user_public_key = pow(self.g, self.user_private_key, self.N)
-        u = int.from_bytes(SHA256(str(user_public_key)
+        u = int.from_bytes(sha256(str(user_public_key)
                                   + str(server_public_key)), "big")
-        x = int.from_bytes(SHA256(str(salt) + self.password), "big")
+        x = int.from_bytes(sha256(str(salt) + self.password), "big")
         S = pow(server_public_key - self.k * pow(self.g, x, self.N),
                 self.user_private_key + u * x, self.N)
-        K = SHA256(str(S))
+        K = sha256(str(S))
         if server.verify_email(self.email, user_public_key,
                                hmac.new(K, str(salt)
                                        .encode("utf-8")).hexdigest()):

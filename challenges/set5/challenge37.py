@@ -2,7 +2,7 @@
 
 import hmac
 
-from challenges.set5.challenge36 import ToySRPClient, ToySRPServer, SHA256
+from challenges.set5.challenge36 import ToySRPClient, ToySRPServer, sha256
 
 if __name__ == "__main__":
     server = ToySRPServer()
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     so clearly S will be 0. We don't need to know either of the real secrets."""
     salt = server.get_email_verifier(email)["salt"]
     S = 0
-    K = SHA256(str(S))
+    K = sha256(str(S))
     token = hmac.new(K, str(salt).encode("utf-8")).hexdigest()
     assert server.verify_email(email, 0, token)
     print("Logged in with 0 key")

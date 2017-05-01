@@ -1,12 +1,13 @@
 """Cryptopals set 5 challenge 39: Implement RSA.
 I'm gonna implement Miller-Rabin primegen because RSA on its own is hardly fun"""
 
+import math
 import random
 from collections import namedtuple
 
 
 def int2bytes(i):
-    return i.to_bytes(i.bit_length()//8 + 1, "big")
+    return i.to_bytes(int(math.ceil(i.bit_length()/8)), "big")
 
 
 def bytes2int(b):

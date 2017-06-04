@@ -82,6 +82,8 @@ def rsa_decrypt(cipher, private_key, return_type=bytes):
         text = pow(cipher, private_key.key, private_key.modulo)
         if return_type is bytes:
             return int2bytes(text)
+        elif return_type is int:
+            return text
         else:
             raise RuntimeError("No decoding defined for return type: {0}"
                                .format(return_type))

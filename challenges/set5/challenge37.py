@@ -2,7 +2,7 @@
 
 import hmac
 
-from challenges.set5.challenge36 import ToySRPClient, ToySRPServer, sha256
+from challenges.common_functions import ToySRPClient, ToySRPServer, sha256
 
 if __name__ == "__main__":
     server = ToySRPServer()
@@ -10,14 +10,15 @@ if __name__ == "__main__":
     client = ToySRPClient(email, password)
     server.create_user(email, password)
     assert client.login_to_server(server)
-    """We'll tell the server our public key is 0.
-    The server calculates S as a power of a multiple our public key,
-    so clearly S will be 0. We don't need to know either of the real secrets."""
+    # We'll tell the server our public key is 0. The server calculates S as
+    # a power of a multiple our public key, so clearly S will be 0. We don't
+    # need to know either of the real secrets.
     salt = server.get_email_verifier(email)["salt"]
     S = 0
     K = sha256(str(S))
     token = hmac.new(K, str(salt).encode("utf-8")).hexdigest()
     assert server.verify_email(email, 0, token)
     print("Logged in with 0 key")
-    """If 0 doesn't work, possibly N or N^2 or some other power of N might work.
-    It would be horrible maths to check for 0 but not 0 mod N. But there you go."""
+    # If 0 doesn't work, possibly N^i for some integer i might work.
+    # It would be horrible maths to check for 0 but not 0 mod N.
+    # But there you go. Apparently people do it.

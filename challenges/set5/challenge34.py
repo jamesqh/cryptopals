@@ -7,24 +7,27 @@ from os import urandom
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-from challenges.set5.challenge33 import gen_DH_keypair, gen_DH_session_key, DHParams
+from challenges.common_functions import (gen_DH_keypair, gen_DH_session_key,
+                                         DHParams)
 
-"""I could use my own DIY CBC but I'd prefer to keep the number of
-moving parts to a minimum."""
 
-def AES_CBC_encrypt(key, iv, plain):
+# I could use my own DIY CBC but I'd prefer to keep the number of moving parts
+# to a minimum.
+
+
+def aes_cbc_encrypt(key, iv, plain):
     cryptor = Cipher(algorithms.AES(key), modes.CBC(iv),
                      default_backend()).encryptor()
     return cryptor.update(plain) + cryptor.finalize()
 
 
-def AES_CBC_decrypt(key, iv, cipher):
+def aes_cbc_decrypt(key, iv, cipher):
     cryptor = Cipher(algorithms.AES(key), modes.CBC(iv),
                      default_backend()).decryptor()
     return cryptor.update(cipher) + cryptor.finalize()
 
 
-def SHA1(message):
+def sha1(message):
     if not isinstance(message, bytes):
         try:
             message = message.encode("utf-8")
@@ -55,15 +58,15 @@ class ToyDHClient:
 
     def send_message(self, message):
         iv = urandom(16)
-        return (AES_CBC_encrypt(SHA1(self.session_key)[:16], iv, message), iv)
+        return (aes_cbc_encrypt(sha1(self.session_key)[:16], iv, message), iv)
 
     def echo_message(self, cipher, iv):
         msg = self.decrypt_message(cipher, iv)
         iv = urandom(16)
-        return (AES_CBC_encrypt(SHA1(self.session_key)[:16], iv, msg), iv)
+        return (aes_cbc_encrypt(sha1(self.session_key)[:16], iv, msg), iv)
 
     def decrypt_message(self, cipher, iv):
-        msg = AES_CBC_decrypt(SHA1(self.session_key)[:16], iv, cipher)
+        msg = aes_cbc_decrypt(sha1(self.session_key)[:16], iv, cipher)
         return msg
 
 if __name__ == "__main__":
@@ -79,32 +82,33 @@ if __name__ == "__main__":
     bob = ToyDHClient()
     alice.recv_params(params)
     bob.recv_params(params)
-    """Alice sends her public key to Bob"""
+    # Alice sends her public key to Bob
     bob.recv_friend_key(alice.send_public_key())
-    """And Bob sends his in return"""
+    # And Bob sends his in return
     alice.recv_friend_key(bob.send_public_key())
-    """Alice will send Bob some Miike Snow lyrics"""
+    # Alice will send Bob some Miike Snow lyrics
     true_msg = b"I been wondering what is freedom is it checking out from all" \
                b" you're feeling is it feeling okay cause you're not running" \
                b"_________"
-    """Bob will echo it"""
+    # Bob will echo it
     bob_echo = bob.echo_message(*alice.send_message(true_msg))
-    """And we check whether they match"""
+    # And we check whether they match
     assert true_msg == alice.decrypt_message(*bob_echo)
     print("DH echo bots talking to each other correctly")
-    """Begin attack"""
-    """Send Bob a fake key in place of Alice's public key"""
+    # Begin attack
+    # Send Bob a fake key in place of Alice's public key
     bob.recv_friend_key(p)
-    """And send Alice the same"""
+    # And send Alice the same
     alice.recv_friend_key(p)
-    """Alice will send Bob some Miike Snow lyrics"""
+    # Alice will send Bob some Miike Snow lyrics
     alice_cipher, iv = alice.send_message(true_msg)
-    """Session key = public^private mod p
-    We've forced public key to 0, hence the session key is 0 regardless of the private key
-    Hence we know the session key and can simply decrypt her message."""
-    assert true_msg == AES_CBC_decrypt(SHA1(0)[:16], iv, alice_cipher)
-    """We'll pass it on to Bob and he'll echo it back, and we'll do the same again"""
+    # Session key = public^private mod p
+    # We've forced public key to 0, hence the session key is 0
+    # regardless of the private key Hence we know the session key
+    # and can simply decrypt her message.
+    assert true_msg == aes_cbc_decrypt(sha1(0)[:16], iv, alice_cipher)
+    # We'll pass it on to Bob, he'll echo it back, and we'll do the same again
     bob_cipher, iv = bob.echo_message(alice_cipher, iv)
-    assert true_msg == AES_CBC_decrypt(SHA1(0)[:16], iv, bob_cipher)
-    """Job done"""
+    assert true_msg == aes_cbc_decrypt(sha1(0)[:16], iv, bob_cipher)
+    # Job done!
     print("Challenge complete")

@@ -1,5 +1,5 @@
 """Cryptopals set 5 challenge 39: Implement RSA.
-I'm gonna implement Miller-Rabin primegen because RSA on its own is hardly fun"""
+I'm gonna implement Miller-Rabin primegen because RSA on its own is no fun"""
 
 import math
 import random
@@ -56,7 +56,7 @@ def generate_rsa_key(bits=1024, e=3):
 def rsa_encrypt(text, public_key):
     if not isinstance(text, int):
         try:
-            """In case text is just a string, turn it into bytes"""
+            # In case text is just a string, turn it into bytes
             text = text.encode("utf-8")
         except AttributeError:
             pass
@@ -71,7 +71,7 @@ def rsa_encrypt(text, public_key):
 def rsa_decrypt(cipher, private_key, return_type=bytes):
     if not isinstance(cipher, int):
         try:
-            """In case cipher is just a string, turn it into bytes"""
+            # In case cipher is just a string, turn it into bytes
             cipher = cipher.encode("utf-8")
         except AttributeError:
             pass
@@ -89,8 +89,8 @@ def rsa_decrypt(cipher, private_key, return_type=bytes):
                                .format(return_type))
 
 
-"""All this prime stuff is just showing off. Use a prime library that implements
-the same thing in C!"""
+# All this prime stuff is just showing off. Use a prime library that does
+# the same thing in C!
 
 primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
           67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137,
@@ -108,12 +108,12 @@ def generate_prime(bits):
 
 def next_prime(start):
     candidate = start
-    """This is kind of awkward... we want to advance in steps of 2
-    to trivially avoid even numbers. To do this we'll make sure
-    our starting point is odd. We will do this by SUBTRACTING one if it is even
-    because we want to make sure we advance a step
-    BEFORE doing the first prime test. Because we want the *next* prime,
-    if the starting point is already prime we don't want to return it."""
+    # This is kind of awkward... we want to advance in steps of 2 to trivially
+    # avoid even numbers. So we must make sure our starting point is odd.
+    # We will do this by SUBTRACTING one if it is even because we want to make
+    # sure we advance a step BEFORE doing the first prime test. Because we want
+    # the *next* prime, if the starting point is already prime
+    # we don't want to return it.
     if candidate%2 == 0:
         candidate -= 1
     while True:
@@ -151,6 +151,11 @@ def test_witness(candidate, witness, d, r):
 
 
 def generate_witnesses(candidate, k):
+    # If our candidate is below certain bounds, we can guarantee correctness
+    # by testing only a small set of witnesses. Defined by
+    # Pomerance, Selfridge and Wagstaff, Jaeschke, Jiang and Deng,
+    # and Sorenson and Webster.
+    # Found on Wikipedia, Miller-Rabin/Deterministic Variants
     bounds = [(2047, [2]),
               (1373653, [2, 3]),
               (9080191, [31, 73]),
@@ -171,6 +176,9 @@ def generate_witnesses(candidate, k):
     for bound, bound_witnesses in bounds:
         if candidate < bound:
             return bound_witnesses
+    # Otherwise we'll select witnesses randomly. Probability of an incorrect
+    # result is related to a bound of 4^-k - the default k=15 means we start
+    # from about 1 in 1 billion. Should be good enough for army work.
     witnesses = []
     while len(witnesses) < k:
         next_witness = random.randint(2, max(2**64, candidate-2))
@@ -198,6 +206,10 @@ def power_2_factor(n):
     return n, s
 
 
+# Code for testing with several perverse pseudo-primes that defeat various
+# other tests. Arnault's pseudo-prime in particular is very nasty,
+# but our Miller-Rabin beats it!
+
 # pseudoprime_names = ["fermat2pp", "millerrabin2pp", "lucasselfridge",
 #                      "stronglucasselfridge", "almostextrastronglucas",
 #                      "extrastronglucas", "perrin", "bruckmanlucas",
@@ -222,5 +234,4 @@ if __name__ == "__main__":
     print("Found primes")
     cipher = rsa_encrypt(msg, public_key)
     assert rsa_decrypt(cipher, private_key) == msg
-    print("Challenge complete, my prime testing function is actually faster "
-          "than sympy's, and it accurately detects Arnault's pseudoprime!")
+    print("Challenge complete!")

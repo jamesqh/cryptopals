@@ -4,28 +4,25 @@ Costs one modexp and one SHA256 per guess, so about as expensive as an attack
 on a very basic salted SHA256 password system."""
 
 import hmac
-import itertools
 import random
 import time
 from operator import itemgetter
 
 from nltk.corpus import words
 
-from challenges.set5.challenge36 import sha256, p
+from challenges.common_functions import sha256
+# A previously defined parameter for SRP
+from challenges.set5.challenge36 import p
 
 word_list = words.words()
 password_list = [word for word in word_list if len(word) > 5]
-
-
-def get_password_iterator():
-    return itertools.filterfalse(lambda word: len(word) < 5, word_list)
 
 
 class SimplifiedToySRPServer:
     def __init__(self, N=p, g=2, k=3):
         self.N, self.g, self.k = N, g, k
         self.server_private_key = random.randint(2, N - 2)
-        """It's a toy and should only ever have one user but heck why not"""
+        # It's a toy and should only ever have one user but why not
         self.users = {}
 
     def create_user(self, email, password):
@@ -52,9 +49,9 @@ class SimplifiedToySRPServer:
                     "server_public_key": server_public_key,
                     "ephemeral_u": u}
         except KeyError:
-            """We don't want to give away that a username doesn't exist
-            for some reason. So we make up invalid parameters and allow
-            verification failure to be deferred to the password stage."""
+            # We don't want to give away that a username doesn't exist.
+            # So we make up invalid parameters and allow verification failure
+            # to be deferred to the password stage.
             return {"salt": random.randint(0, 2**16),
                     "server_public_key": random.randint(0, self.N),
                     "ephemeral_u": random.getrandbits(128)}
@@ -95,7 +92,7 @@ class SimplifiedToySRPClient:
         server.create_user(self.email, self.password)
 
     def login_to_server(self, server):
-        # what I'm about to do is absolutely horrible, why is PEP8 so short.
+        # Pulling the values with itemgetter and unpacking into a tuple
         (salt,
          server_public_key,
          u) = itemgetter("salt",
@@ -114,7 +111,7 @@ class SimplifiedToySRPClient:
             return False
 
 
-class AttackServer:
+class MITMSRPServer:
     def __init__(self, true_server, N=p, g=2, k=3):
         self.N, self.g, self.k = N, g, k
         self.true_server = true_server
@@ -124,16 +121,17 @@ class AttackServer:
         return {"salt": 0, "server_public_key": self.g, "ephemeral_u": 1}
 
     def verify_email(self, email, user_public_key, token):
-        """Pretend this is a proper multi-threaded client server thing
-        and we just passed through the login to the actual server
-        so it doesn't take a suspiciously long time."""
+        # In the real world before doing this we'd pass the client's credentials
+        # through to the real server and give the client whatever the server
+        # provides in return, being as transparent as possible, because this
+        # next step might take some time.
+        # But this is a toy scenario and we don't mind.
         for password in password_list:
             x = int.from_bytes(sha256(str(0) + password), "big")
             v = pow(self.g, x, self.N)
             A = user_public_key
             K = sha256((A * v) % self.N)
             test_token = hmac.new(K, str(0).encode("utf-8")).hexdigest()
-            """No need to worry about timing attacks here!"""
             if test_token == token:
                 client = SimplifiedToySRPClient(email, password)
                 assert client.login_to_server(self.true_server)
@@ -145,17 +143,17 @@ class AttackServer:
 if __name__ == "__main__":
     server = SimplifiedToySRPServer()
     secret_password = random.choice(password_list)
-    print("true password", secret_password)
+    print("True password:", secret_password)
     client = SimplifiedToySRPClient("user@example.com", secret_password)
     client.register_with_server(server)
     if client.login_to_server(server):
         print("Login successful")
     else:
         print("Login failed")
-    attack_server = AttackServer(server)
+    attack_server = MITMSRPServer(server)
     start = time.time()
     client.login_to_server(attack_server)
-    print("Attack took", time.time() - start, "seconds")
+    print("Attack took {0} seconds".format(round(time.time() - start, 2)))
     guessed_password = attack_server.users["user@example.com"].password
     assert guessed_password == secret_password
     print("Found password: ", guessed_password)

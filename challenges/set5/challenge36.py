@@ -26,7 +26,7 @@ class ToySRPServer:
     def __init__(self, N=p, g=2, k=3):
         self.N, self.g, self.k = N, g, k
         self.server_private_key = random.randint(2, N - 2)
-        """It's a toy and should only ever have one user but heck why not"""
+        # It's a toy and should only ever have one user but why not
         self.users = {}
 
     def create_user(self, email, password):
@@ -51,9 +51,9 @@ class ToySRPServer:
             return {"salt": salt,
                     "server_public_key": server_public_key}
         except KeyError:
-            """We don't want to give away that a username doesn't exist
-            for some reason. So we make up invalid parameters and allow
-            verification failure to be deferred to the password stage."""
+            # We don't want to give away that a username doesn't exist.
+            # So we make up invalid parameters and allow verification failure
+            # to be deferred to the password stage."""
             return {"salt": random.randint(0, 2**16),
                     "server_public_key": random.randint(0, self.N)}
 
@@ -64,7 +64,7 @@ class ToySRPServer:
                                                     "server_public_key"
                                                     )(self.users[email])
         except KeyError:
-            """See get_email_verifier"""
+            # See get_email_verifier
             salt, v, server_public_key = (random.randint(0, 2**16),
                                           random.randint(0, self.N),
                                           random.randint(0, self.N))

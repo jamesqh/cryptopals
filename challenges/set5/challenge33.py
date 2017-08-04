@@ -38,3 +38,4 @@ if __name__ == "__main__":
     assert (gen_DH_session_key(params, alice_key.private, bob_key.public)
             == gen_DH_session_key(params, bob_key.private, alice_key.public))
     print("Diffie Hellman appears to work properly")
+    print("Challenge complete")

@@ -14,24 +14,23 @@ in the oracle, which is twice as fast as native pow(), and usually it's about
 from os import urandom
 from random import randint
 
-from challenges.set5.challenge39 import (rsa_decrypt, rsa_encrypt, int2bytes,
+from challenges.common_functions import (rsa_decrypt, rsa_encrypt, int2bytes,
                                          bytes2int, generate_rsa_key, modinv)
-
 
 try:
     from gmpy2 import mpz
 
     def fast_rsa_encrypt(text_int, public_key):
-
         return pow(mpz(text_int), mpz(public_key.key), mpz(public_key.modulo))
 
     def fast_rsa_decrypt(cipher_int, private_key):
-
-        return int2bytes(int(pow(mpz(cipher_int), mpz(private_key.key), mpz(private_key.modulo))))
+        return int2bytes(int(pow(mpz(cipher_int), mpz(private_key.key),
+                                 mpz(private_key.modulo))))
 
 except ImportError:
-    print("gymp2 not found, reverting to slow native exponentiation for oracle.")
+    print("gymp2 not found, revert to slow native exponentiation for oracle.")
     print("You really should have gmpy2!")
+    mpz = int # The machine wants us to be able to call it accidentally
     fast_rsa_encrypt = rsa_encrypt
     fast_rsa_decrypt = rsa_decrypt
 
@@ -46,20 +45,25 @@ class IntervalUnion:
     def add_interval(self, new_interval):
         overlap = None # no overlapping interval we know of
         for interval in self.intervals:
+            # If candidate is contained within an existing interval
+            # we can just do nothing and return
             if self.contains(interval, new_interval):
-                return # if candidate is contained within an existing interval
-                       # we can just do nothing and return
-            if not overlap: # if no overlapping interval found yet
+                return
+            # If no overlapping interval found yet
+            if not overlap:
                 union = self.union_two_intervals(interval, new_interval)
-                if union is not None: #check whether this is one and record it
+                # Check whether this is one and record it
+                if union is not None:
                     overlap = interval
-        if overlap is None: # if we didn't find an overlap in all intervals
-            self.intervals.add(new_interval) # the new interval is disjoint
-            return # with all and we can simply add it and return
+        # If we didn't find an overlap in any interval, the new interval
+        # is disjoint with all and we can simply add it and return
+        if overlap is None:
+            self.intervals.add(new_interval)
+            return
+        # Otherwise we remove the overlapped interval and add the union
+        # of the overlapped and the candidate as a new interval
+        # going through the same function as above
         else:
-            # otherwise we remove the overlapped interval and add the
-            # union of the overlapped and the candidate as a new interval
-            # going through the same function as above
             union = self.union_two_intervals(overlap, new_interval)
             self.intervals.remove(overlap)
             self.add_interval(union)

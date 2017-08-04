@@ -2,12 +2,13 @@
 This one is so good!
 The binary search uses REAL intervals not integer arithmetic,
 so we'll use the decimal module to get floats of sufficient precision.
-The lower and upper bounds both converge on the answer, one rounds up the other down."""
+The lower and upper bounds both converge on the answer,
+one rounds up and the other down."""
 
 from decimal import Decimal, getcontext
 from math import ceil
 
-from challenges.set5.challenge39 import (rsa_encrypt, rsa_decrypt,
+from challenges.common_functions import (rsa_encrypt, rsa_decrypt,
                                          generate_rsa_key, int2bytes)
 
 

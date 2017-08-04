@@ -1,12 +1,13 @@
 """Cryptopals set 6 challenge 43: DSA key recovery from nonce
-Int-hex-string-bytes-hex chain and a phantom newline, what an annoying one this is"""
+Int-hex-string-bytes-hex chain and a phantom newline,
+what an annoying one this is"""
 
 import hashlib
 import random
 from collections import namedtuple
 
-from challenges.set5.challenge36 import sha256
-from challenges.set5.challenge39 import (generate_prime, miller_rabin, bytes2int, modinv)
+from challenges.common_functions import (generate_prime, miller_rabin,
+                                         bytes2int, modinv, sha256)
 
 DSAParams = namedtuple("DSAParams", ["p", "q", "g", "hash_function"])
 DSAKey = namedtuple("DSAKey", ["private_key", "public_key", "params"])
@@ -15,7 +16,8 @@ DSAKey = namedtuple("DSAKey", ["private_key", "public_key", "params"])
 def generate_dsa_params(key_len_L=3072, key_len_N=256, hash_function=sha256):
     hash_length = len(hash_function(0))*8
     if not key_len_N <= hash_length:
-        raise ValueError("Key length N must be less than hash function output size")
+        raise ValueError("Key length N must be less than hash function "
+                         "output size")
     if not key_len_N < key_len_L:
         raise ValueError("Key length N must be less than key length L")
     q = generate_prime(key_len_N)
@@ -41,13 +43,15 @@ def dsa_sign(dsa_key, msg):
     dsa_params = dsa_key.params
     hash_function = dsa_params.hash_function
     r = 0
+    k = 1 # Pointless assignation but makes the machine happy
     while r == 0:
         k = random.randint(1, dsa_params.q-1)
         r = pow(dsa_params.g, k, dsa_params.p) % dsa_params.q
     s = 0
     while s == 0:
-        s = (modinv(k, dsa_params.q)
-             * (bytes2int(hash_function(msg)) + dsa_key.private_key * r)) % dsa_params.q
+        s = ((modinv(k, dsa_params.q) * (bytes2int(hash_function(msg))
+                                         + dsa_key.private_key * r))
+             % dsa_params.q)
     return (r, s)
 
 
@@ -60,8 +64,9 @@ def dsa_verify(dsa_key, msg, signature):
     w = modinv(s, dsa_params.q)
     u1 = (bytes2int(hash_function(msg)) * w) % dsa_params.q
     u2 = (r * w) % dsa_params.q
-    v = ((pow(dsa_params.g, u1, dsa_params.p)
-          * pow(dsa_key.public_key, u2, dsa_params.p)) % dsa_params.p) % dsa_params.q
+    v = (((pow(dsa_params.g, u1, dsa_params.p)
+           * pow(dsa_key.public_key, u2, dsa_params.p))
+          % dsa_params.p) % dsa_params.q)
     if not v == r:
         raise ValueError("Invalid signature")
     else:
@@ -76,8 +81,9 @@ def unsafe_dsa_sign(dsa_key, msg, k=None):
         raise ValueError("Supplied k is unsuitable (g**k % p == 0)")
     s = 0
     while s == 0:
-        s = (modinv(k, dsa_params.q)
-             * (bytes2int(hash_function(msg)) + dsa_key.private_key * r)) % dsa_params.q
+        s = ((modinv(k, dsa_params.q) * (bytes2int(hash_function(msg))
+                                         + dsa_key.private_key * r))
+             % dsa_params.q)
     return (r, s)
 
 
@@ -114,7 +120,8 @@ def sha1(message):
 if __name__ == "__main__":
     dsa_params = generate_dsa_params(key_len_L=512)
     dsa_key = generate_dsa_key(dsa_params)
-    msg = b"Rough winds do shake the darling buds of May, and Summer's lease hath all too short a date"
+    msg = (b"Rough winds do shake the darling buds of May, "
+           b"and Summer's lease hath all too short a date")
     signature = dsa_sign(dsa_key, msg)
     assert dsa_verify(dsa_key, msg, signature)
     try:
@@ -123,8 +130,8 @@ if __name__ == "__main__":
     except ValueError:
         pass
     compromised_signature = unsafe_dsa_sign(dsa_key, msg, 0xdeadbeef)
-    assert recover_dsa_key_from_k(dsa_params, msg, compromised_signature, 0xdeadbeef) == dsa_key.private_key
-    """Params for attacking cpals key"""
+    assert recover_dsa_key_from_k(dsa_params, msg, compromised_signature, 0xdeadbeef) == dsa_key.private_key  # nopep8
+    # Params for attacking cpals key
     p = int("800000000000000089e1855218a0e7dac38136ffafa72eda7859f2171e25e65eac"
             "698c1702578b07dc2a1076da241c76c62d374d8389ea5aeffd3226a0530cc565f3"
             "bf6b50929139ebeac04f48c3c84afb796d61e5a4f9a8fda812ab59494232c7d2b4"
@@ -140,7 +147,8 @@ if __name__ == "__main__":
                      "8280ce678e931868d23eb095fde9d3779191b8c0299d6e07bbb283e66"
                      "33451e535c45513b2d33c99ea17", 16)
     msg = (b"For those that envy a MC it can be hazardous to your health\n"
-           b"So be friendly, a matter of life and death, just like a etch-a-sketch\n")
+           b"So be friendly, a matter of life and death, "
+           b"just like a etch-a-sketch\n")
     assert sha1(msg).hex() == "d2d0714f014a9784047eaeccf956520045c45265"
     r = 548099063082341131477253921760299949438196259240
     s = 857042759984254168557880549501802188789837994940
@@ -148,12 +156,16 @@ if __name__ == "__main__":
     dsa_params = DSAParams(p, q, g, sha1)
     answer = None
     for k_guess in range(2**16+1):
-        private_guess = recover_dsa_key_from_k(dsa_params, msg, signature, k_guess)
-        if (check_private_key_guess_by_public(private_guess, public_key, dsa_params)
-            and check_private_key_guess_by_signature(private_guess, k_guess, msg, signature, dsa_params)):
+        private_guess = recover_dsa_key_from_k(dsa_params, msg,
+                                               signature, k_guess)
+        if (check_private_key_guess_by_public(private_guess, public_key,
+                                              dsa_params)
+            and check_private_key_guess_by_signature(private_guess, k_guess,msg,
+                                                     signature, dsa_params)):
             answer = private_guess
             break
     assert answer is not None
     print("Answer is {0}".format(answer))
-    assert sha1(hex(answer)[2:]).hex() == "0954edd5e0afe5542a4adf012611a91912a3ec16"
+    assert (sha1(hex(answer)[2:]).hex()
+            == "0954edd5e0afe5542a4adf012611a91912a3ec16")
     print("Challenge complete")

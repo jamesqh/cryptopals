@@ -1,9 +1,11 @@
-"""Cryptopals set 6 challenge 41: Implement unpadded RSA message recover oracle."""
+"""
+Cryptopals set 6 challenge 41: Implement unpadded RSA message recovery oracle.
+"""
 
 import random
 import time
 
-from challenges.set5.challenge39 import (rsa_encrypt, rsa_decrypt,
+from challenges.common_functions import (rsa_encrypt, rsa_decrypt,
                                          generate_rsa_key, modinv, int2bytes,
                                          bytes2int)
 
@@ -40,7 +42,8 @@ class ToyRSAServer:
 
 if __name__ == "__main__":
     server = ToyRSAServer()
-    msg = b"It's a long, a long way down on your own, it's a long, a long way out"
+    msg = (b"It's a long, a long way down on your own, "
+           b"it's a long, a long way out")
     cipher = server.encrypt_message(msg)
     assert server.decrypt_message(cipher) == msg
     try:

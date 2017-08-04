@@ -12,8 +12,8 @@ from challenges.set5.challenge39 import (rsa_encrypt, rsa_decrypt,
 
 
 class RSAParityOracle:
-    def __init__(self):
-        self.public, self.private = generate_rsa_key(512)
+    def __init__(self, bits):
+        self.public, self.private = generate_rsa_key(bits)
 
     def parity_check(self, cipher):
         plain = rsa_decrypt(cipher, self.private, return_type=int)
@@ -26,7 +26,7 @@ class RSAParityOracle:
         return self.public
 
 if __name__ == "__main__":
-    oracle = RSAParityOracle()
+    oracle = RSAParityOracle(512)
     import binascii
     msg = binascii.a2b_base64("VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IGFy"
                               "b3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
